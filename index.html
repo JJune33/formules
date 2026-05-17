@@ -317,6 +317,12 @@
           </div>
         </div>
 
+        <div class="copyRow" style="margin-top:14px;justify-content:flex-start;">
+          <button id="playBtn" type="button">Bewegen</button>
+          <button id="resetBtn" type="button">Terug naar start</button>
+          <div id="playStatus" class="status"></div>
+        </div>
+
         <label class="checkCard">
           <input id="pingpong" type="checkbox">
           <span><strong>Terug naar begin via omgekeerde beweging</strong><br>Uit betekent: na het einde springt de beweging terug naar de beginwaarde. Aan betekent: heen en daarna vloeiend terug.</span>
@@ -455,6 +461,9 @@
       yFormula:document.getElementById("yFormula"),
       copyX:document.getElementById("copyX"),
       copyY:document.getElementById("copyY"),
+      playBtn:document.getElementById("playBtn"),
+      resetBtn:document.getElementById("resetBtn"),
+      playStatus:document.getElementById("playStatus"),
       copyXStatus:document.getElementById("copyXStatus"),
       copyYStatus:document.getElementById("copyYStatus"),
       canvas:document.getElementById("plot"),
@@ -574,6 +583,11 @@
       };
     }
 
+    let isPlaying=false;
+    let animationFrameId=null;
+    let animationStartedAt=0;
+    let animationOffset=0;
+
     function update(){
       const settings=getSettings();
       el.durationVal.textContent=settings.duration;
@@ -622,6 +636,45 @@
       el.info.textContent=`Canvas 320x320, middelpunt 160x160. ${desc} ${settings.pingpong?"Modus: heen en terug.":"Modus: steeds opnieuw vanaf begin."}`;
     }
 
+    function animate(now){
+      if(!isPlaying)return;
+      const settings=getSettings();
+      const elapsed=((now-animationStartedAt)/1000)+animationOffset;
+      const looped=((elapsed%settings.duration)+settings.duration)%settings.duration;
+      el.preview.value=String(looped);
+      update();
+      animationFrameId=requestAnimationFrame(animate);
+    }
+
+    function togglePlay(){
+      if(isPlaying){
+        isPlaying=false;
+        if(animationFrameId)cancelAnimationFrame(animationFrameId);
+        animationFrameId=null;
+        animationOffset=Number(el.preview.value);
+        el.playBtn.textContent="Bewegen";
+        el.playStatus.textContent="Gepauzeerd";
+        return;
+      }
+      isPlaying=true;
+      animationOffset=Number(el.preview.value);
+      animationStartedAt=performance.now();
+      el.playBtn.textContent="Pauze";
+      el.playStatus.textContent="Animatie actief";
+      animationFrameId=requestAnimationFrame(animate);
+    }
+
+    function resetAnimation(){
+      isPlaying=false;
+      if(animationFrameId)cancelAnimationFrame(animationFrameId);
+      animationFrameId=null;
+      animationOffset=0;
+      el.preview.value="0";
+      el.playBtn.textContent="Bewegen";
+      el.playStatus.textContent="Startpositie";
+      update();
+    }
+
     async function copyText(textarea,statusEl){
       try{
         await navigator.clipboard.writeText(textarea.value);
@@ -658,11 +711,19 @@
     }
 
     [el.select,el.duration,el.scale,el.range,el.a,el.centerX,el.centerY,el.timeTag,el.preview,el.pingpong].forEach(input=>{
-      input.addEventListener("input",update);
-      input.addEventListener("change",update);
+      input.addEventListener("input",()=>{
+        if(input===el.preview)animationOffset=Number(el.preview.value);
+        update();
+      });
+      input.addEventListener("change",()=>{
+        if(input===el.preview)animationOffset=Number(el.preview.value);
+        update();
+      });
     });
     el.copyX.addEventListener("click",()=>copyText(el.xFormula,el.copyXStatus));
     el.copyY.addEventListener("click",()=>copyText(el.yFormula,el.copyYStatus));
+    el.playBtn.addEventListener("click",togglePlay);
+    el.resetBtn.addEventListener("click",resetAnimation);
 
     runTests();
     update();
