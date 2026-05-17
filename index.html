@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Facer formule visualizer</title>
+  <style>
+    :root{
+      --bg:#101114;
+      --panel:#181a20;
+      --panel2:#20232b;
+      --text:#f3f5f7;
+      --muted:#aeb5c0;
+      --accent:#7dd3fc;
+      --accent2:#c4b5fd;
+      --grid:#2d313b;
+      --line:#f8fafc;
+      --point:#facc15;
+      --danger:#fb7185;
+      --ok:#86efac;
+      --shadow:0 18px 55px rgba(0,0,0,.35);
+      --radius:22px;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(circle at top left,rgba(125,211,252,.16),transparent 34rem),
+        radial-gradient(circle at bottom right,rgba(196,181,253,.13),transparent 30rem),
+        var(--bg);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+    }
+
+    .app{
+      width:min(1080px,100%);
+      display:grid;
+      grid-template-columns:1.05fr .95fr;
+      gap:18px;
+    }
+
+    .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02)),var(--panel);
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .header{
+      padding:22px 22px 16px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+
+    h1{
+      margin:0 0 6px;
+      font-size:clamp(1.55rem,2.5vw,2.25rem);
+      line-height:1.1;
+      letter-spacing:-.04em;
+    }
+
+    .sub{
+      margin:0;
+      color:var(--muted);
+      line-height:1.55;
+      font-size:.96rem;
+    }
+
+    .body{padding:18px 22px 22px}
+
+    label{
+      display:block;
+      color:var(--muted);
+      font-size:.86rem;
+      margin:0 0 8px;
+    }
+
+    select,input[type="text"]{
+      width:100%;
+      border:1px solid rgba(255,255,255,.12);
+      background:var(--panel2);
+      color:var(--text);
+      border-radius:16px;
+      padding:13px 14px;
+      outline:none;
+      font-size:1rem;
+    }
+
+    select:focus,input[type="text"]:focus{
+      border-color:rgba(125,211,252,.7);
+      box-shadow:0 0 0 4px rgba(125,211,252,.12);
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns:1fr 92px;
+      gap:12px;
+      align-items:center;
+      margin:16px 0;
+    }
+
+    .sliderLine{
+      display:grid;
+      gap:8px;
+    }
+
+    input[type="range"]{
+      width:100%;
+      accent-color:var(--accent);
+    }
+
+    .valuePill{
+      background:var(--panel2);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:14px;
+      padding:10px 8px;
+      text-align:center;
+      font-variant-numeric:tabular-nums;
+      color:var(--text);
+    }
+
+    .miniGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:14px;
+    }
+
+    .formulaBox{
+      margin-top:16px;
+      background:#0b0c10;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      padding:14px;
+    }
+
+    .formulaBox textarea{
+      width:100%;
+      min-height:92px;
+      resize:vertical;
+      background:transparent;
+      border:0;
+      color:#e7f7ff;
+      outline:none;
+      font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+      font-size:.98rem;
+      line-height:1.45;
+    }
+
+    button{
+      border:0;
+      border-radius:16px;
+      padding:12px 15px;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:#08090c;
+      font-weight:750;
+      cursor:pointer;
+      transition:transform .16s ease,filter .16s ease;
+    }
+
+    button:hover{transform:translateY(-1px);filter:brightness(1.06)}
+    button:active{transform:translateY(0)}
+
+    .copyRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      margin-top:10px;
+    }
+
+    .status{
+      color:var(--ok);
+      min-height:1.2em;
+      font-size:.9rem;
+    }
+
+    .screenWrap{padding:18px}
+
+    .screen{
+      position:relative;
+      width:100%;
+      aspect-ratio:1/1;
+      background:#050608;
+      border:10px solid #292d36;
+      border-radius:28px;
+      overflow:hidden;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 24px 60px rgba(0,0,0,.45);
+    }
+
+    canvas{
+      display:block;
+      width:100%;
+      height:100%;
+    }
+
+    .screenBadge{
+      position:absolute;
+      left:14px;
+      top:14px;
+      background:rgba(5,6,8,.72);
+      backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:999px;
+      padding:8px 11px;
+      color:var(--muted);
+      font-size:.82rem;
+      font-variant-numeric:tabular-nums;
+    }
+
+    .info{
+      margin-top:14px;
+      padding:14px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      color:var(--muted);
+      line-height:1.5;
+      font-size:.92rem;
+    }
+
+    .note{
+      color:var(--danger);
+      margin-top:8px;
+      min-height:1.2em;
+      font-size:.88rem;
+    }
+
+    .tests{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:.82rem;
+      line-height:1.5;
+    }
+
+    @media(max-width:860px){
+      body{padding:12px}
+      .app{grid-template-columns:1fr}
+      .miniGrid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="card">
+      <div class="header">
+        <h1>Facer formule visualizer</h1>
+        <p class="sub">Kies een formule, beweeg de sliders en kopieer direct de Facer WFF formule.</p>
+      </div>
+      <div class="body">
+        <label for="formulaSelect">Formule</label>
+        <select id="formulaSelect"></select>
+
+        <div class="row">
+          <div class="sliderLine">
+            <label for="xSlider">x preview waarde</label>
+            <input id="xSlider" type="range" min="-10" max="10" value="2" step="0.01">
+          </div>
+          <div id="xVal" class="valuePill">2.00</div>
+        </div>
+
+        <div class="row">
+          <div class="sliderLine">
+            <label for="ySlider">y preview waarde</label>
+            <input id="ySlider" type="range" min="-10" max="10" value="2" step="0.01">
+          </div>
+          <div id="yVal" class="valuePill">2.00</div>
+        </div>
+
+        <div class="row">
+          <div class="sliderLine">
+            <label for="aSlider">a waarde</label>
+            <input id="aSlider" type="range" min="0.2" max="10" value="3" step="0.01">
+          </div>
+          <div id="aVal" class="valuePill">3.00</div>
+        </div>
+
+        <div class="miniGrid">
+          <div>
+            <label for="xTag">Facer tag voor x</label>
+            <input id="xTag" type="text" value="#DWFSS#">
+          </div>
+          <div>
+            <label for="yTag">Facer tag voor y</label>
+            <input id="yTag" type="text" value="#Ds#">
+          </div>
+        </div>
+
+        <div class="formulaBox">
+          <label for="formulaOutput">Kopieerbare Facer WFF formule</label>
+          <textarea id="formulaOutput" spellcheck="false"></textarea>
+          <div class="copyRow">
+            <button id="copyBtn" type="button">Kopieer formule</button>
+            <div id="copyStatus" class="status"></div>
+          </div>
+        </div>
+        <div id="testStatus" class="tests"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="header">
+        <h1>Klein scherm</h1>
+        <p class="sub">De witte lijn is de formule. De gele stip gebruikt de huidige sliderwaarde.</p>
+      </div>
+      <div class="screenWrap">
+        <div class="screen">
+          <canvas id="plot" width="620" height="620"></canvas>
+          <div id="badge" class="screenBadge"></div>
+        </div>
+        <div id="info" class="info"></div>
+        <div id="note" class="note"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function num(v){
+      return Number(v).toFixed(2).replace(/\.00$/,"").replace(/(\.\d*?)0+$/,"$1");
+    }
+
+    function buildWff(formula,xTag,yTag,a){
+      if(!formula||typeof formula.wff!=="function")return "";
+      return formula.wff(xTag,yTag,a);
+    }
+
+    const formulas=[
+      {name:"y=x",expr:x=>x,wff:x=>`(${x})`,kind:"function"},
+      {name:"y=x²",expr:x=>x*x,wff:x=>`(${x}*${x})`,kind:"function"},
+      {name:"y=x³",expr:x=>x*x*x,wff:x=>`(${x}*${x}*${x})`,kind:"function"},
+      {name:"y=sin(x)",expr:x=>Math.sin(x),wff:x=>`(sin(${x}))`,kind:"function"},
+      {name:"y=cos(x)",expr:x=>Math.cos(x),wff:x=>`(cos(${x}))`,kind:"function"},
+      {name:"y=tan(x)",expr:x=>Math.tan(x),wff:x=>`(tan(${x}))`,kind:"function",clip:10},
+      {name:"y=cot(x)",expr:x=>1/Math.tan(x),wff:x=>`(1/tan(${x}))`,kind:"function",clip:10},
+      {name:"y=1/x",expr:x=>1/x,wff:x=>`(1/${x})`,kind:"function",clip:10},
+      {name:"y=-1/x",expr:x=>-1/x,wff:x=>`(-1/${x})`,kind:"function",clip:10},
+      {name:"y=|x|",expr:x=>Math.abs(x),wff:x=>`(abs(${x}))`,kind:"function"},
+      {name:"y=-|x|",expr:x=>-Math.abs(x),wff:x=>`(-abs(${x}))`,kind:"function"},
+      {name:"y=-x",expr:x=>-x,wff:x=>`(-${x})`,kind:"function"},
+      {name:"y=logₐ(x)",expr:(x,a)=>Math.log(x)/Math.log(a),wff:(x,y,a)=>`(log(${x})/log(${num(a)}))`,kind:"function",domain:x=>x>0},
+      {name:"y=aˣ",expr:(x,a)=>Math.exp(x*Math.log(a)),wff:(x,y,a)=>`(exp(${x}*log(${num(a)})))`,kind:"function",clip:10},
+      {name:"x²+y²=a²",expr:null,wff:(x,y,a)=>`((${x}*${x})+(${y}*${y})==(${num(a)}*${num(a)}))`,kind:"circle"}
+    ];
+
+    const el={
+      select:document.getElementById("formulaSelect"),
+      x:document.getElementById("xSlider"),
+      y:document.getElementById("ySlider"),
+      a:document.getElementById("aSlider"),
+      xVal:document.getElementById("xVal"),
+      yVal:document.getElementById("yVal"),
+      aVal:document.getElementById("aVal"),
+      xTag:document.getElementById("xTag"),
+      yTag:document.getElementById("yTag"),
+      out:document.getElementById("formulaOutput"),
+      copy:document.getElementById("copyBtn"),
+      status:document.getElementById("copyStatus"),
+      canvas:document.getElementById("plot"),
+      badge:document.getElementById("badge"),
+      info:document.getElementById("info"),
+      note:document.getElementById("note"),
+      testStatus:document.getElementById("testStatus")
+    };
+
+    formulas.forEach((f,i)=>{
+      const opt=document.createElement("option");
+      opt.value=i;
+      opt.textContent=f.name;
+      el.select.appendChild(opt);
+    });
+
+    const ctx=el.canvas.getContext("2d");
+    const W=el.canvas.width;
+    const H=el.canvas.height;
+    const min=-10;
+    const max=10;
+
+    function cleanTag(value,fallback){
+      const trimmed=String(value||"").trim();
+      return trimmed||fallback;
+    }
+
+    function sx(x){return (x-min)/(max-min)*W}
+    function sy(y){return H-(y-min)/(max-min)*H}
+
+    function drawGrid(){
+      ctx.clearRect(0,0,W,H);
+      ctx.fillStyle="#050608";
+      ctx.fillRect(0,0,W,H);
+
+      ctx.lineWidth=1;
+      ctx.strokeStyle="rgba(255,255,255,.08)";
+      for(let i=min;i<=max;i++){
+        ctx.beginPath();
+        ctx.moveTo(sx(i),0);
+        ctx.lineTo(sx(i),H);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0,sy(i));
+        ctx.lineTo(W,sy(i));
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle="rgba(255,255,255,.32)";
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(sx(0),0);
+      ctx.lineTo(sx(0),H);
+      ctx.moveTo(0,sy(0));
+      ctx.lineTo(W,sy(0));
+      ctx.stroke();
+    }
+
+    function drawFunction(f,a){
+      ctx.strokeStyle="#f8fafc";
+      ctx.lineWidth=4;
+      ctx.lineCap="round";
+      ctx.lineJoin="round";
+      let drawing=false;
+      ctx.beginPath();
+
+      for(let px=0;px<=W;px++){
+        const x=min+(px/W)*(max-min);
+        if(f.domain&&!f.domain(x,a)){
+          drawing=false;
+          continue;
+        }
+        let y=f.expr(x,a);
+        if(!Number.isFinite(y)||Math.abs(y)>1000){
+          drawing=false;
+          continue;
+        }
+        if(f.clip&&Math.abs(y)>f.clip){
+          drawing=false;
+          continue;
+        }
+        const py=sy(y);
+        if(!drawing){ctx.moveTo(px,py);drawing=true}else{ctx.lineTo(px,py)}
+      }
+      ctx.stroke();
+    }
+
+    function drawCircle(a){
+      ctx.strokeStyle="#f8fafc";
+      ctx.lineWidth=4;
+      ctx.beginPath();
+      ctx.arc(sx(0),sy(0),Math.abs(sx(a)-sx(0)),0,Math.PI*2);
+      ctx.stroke();
+    }
+
+    function drawPoint(x,y){
+      if(!Number.isFinite(x)||!Number.isFinite(y))return;
+      if(x<min||x>max||y<min||y>max)return;
+      ctx.beginPath();
+      ctx.fillStyle="#facc15";
+      ctx.arc(sx(x),sy(y),8,0,Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle="rgba(0,0,0,.65)";
+      ctx.lineWidth=3;
+      ctx.stroke();
+    }
+
+    function update(){
+      const f=formulas[Number(el.select.value)]||formulas[0];
+      const x=Number(el.x.value);
+      const ySlider=Number(el.y.value);
+      const a=Number(el.a.value);
+      const xTag=cleanTag(el.xTag.value,"#DWFSS#");
+      const yTag=cleanTag(el.yTag.value,"#Ds#");
+      const wff=buildWff(f,xTag,yTag,a);
+
+      el.xVal.textContent=x.toFixed(2);
+      el.yVal.textContent=ySlider.toFixed(2);
+      el.aVal.textContent=a.toFixed(2);
+      el.out.value=wff;
+      el.status.textContent="";
+      el.note.textContent="";
+
+      drawGrid();
+
+      let yPoint=ySlider;
+      if(f.kind==="circle"){
+        drawCircle(a);
+        const onCircle=Math.abs(x*x+ySlider*ySlider-a*a)<0.18;
+        el.info.textContent=`Cirkel met straal a=${a.toFixed(2)}. De gele stip gebruikt x=${x.toFixed(2)} en y=${ySlider.toFixed(2)}.`;
+        el.note.textContent=onCircle?"De huidige x en y liggen ongeveer op de cirkel.":"De huidige x en y liggen niet exact op de cirkel.";
+      }else{
+        drawFunction(f,a);
+        yPoint=f.domain&&!f.domain(x,a)?NaN:f.expr(x,a);
+        const readable=Number.isFinite(yPoint)?yPoint.toFixed(3):"ongeldig";
+        el.info.textContent=`Preview: bij x=${x.toFixed(2)} is y=${readable}. De y slider blijft beschikbaar voor vergelijking en voor de cirkelformule.`;
+        if(!Number.isFinite(yPoint))el.note.textContent="Deze x waarde valt buiten het domein van de gekozen formule.";
+      }
+
+      drawPoint(x,yPoint);
+      el.badge.textContent=f.kind==="circle"?`x=${x.toFixed(2)} y=${ySlider.toFixed(2)}`:`x=${x.toFixed(2)}`;
+    }
+
+    async function copyFormula(){
+      try{
+        await navigator.clipboard.writeText(el.out.value);
+        el.status.textContent="Gekopieerd";
+      }catch(err){
+        el.out.focus();
+        el.out.select();
+        document.execCommand("copy");
+        el.status.textContent="Gekopieerd";
+      }
+    }
+
+    function runTests(){
+      const tests=[
+        {name:"lineair",actual:buildWff(formulas[0],"#DWFSS#","#Ds#",3),expected:"(#DWFSS#)"},
+        {name:"kwadraat",actual:buildWff(formulas[1],"#DWFSS#","#Ds#",3),expected:"(#DWFSS#*#DWFSS#)"},
+        {name:"sinus",actual:buildWff(formulas[3],"#DWFSS#","#Ds#",3),expected:"(sin(#DWFSS#))"},
+        {name:"log met a",actual:buildWff(formulas[12],"#DWFSS#","#Ds#",2),expected:"(log(#DWFSS#)/log(2))"},
+        {name:"macht met a",actual:buildWff(formulas[13],"#DWFSS#","#Ds#",2),expected:"(exp(#DWFSS#*log(2)))"},
+        {name:"cirkel met x y a",actual:buildWff(formulas[14],"#DWFSS#","#Ds#",3),expected:"((#DWFSS#*#DWFSS#)+(#Ds#*#Ds#)==(3*3))"}
+      ];
+      const failed=tests.filter(t=>t.actual!==t.expected);
+      if(failed.length){
+        console.error("WFF tests failed",failed);
+        el.testStatus.textContent=`Zelftest: ${failed.length} formule(s) mislukt. Zie console.`;
+        el.testStatus.style.color="var(--danger)";
+      }else{
+        el.testStatus.textContent=`Zelftest: ${tests.length} formules ok.`;
+        el.testStatus.style.color="var(--muted)";
+      }
+    }
+
+    [el.select,el.x,el.y,el.a,el.xTag,el.yTag].forEach(input=>{
+      input.addEventListener("input",update);
+      input.addEventListener("change",update);
+    });
+    el.copy.addEventListener("click",copyFormula);
+
+    runTests();
+    update();
+  </script>
+</body>
+</html>
